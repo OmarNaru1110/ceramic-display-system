@@ -1,6 +1,6 @@
 ### Core Requirements
 #### Admin
-1. Admin can add/update/delete ceramic
+1. Admin can CRUD ceramic
 #### Customer
 1. Customer can view ceramic and it's details
 2. Filter and sort ceramic (price, search query, quality grade, category, etc..)
@@ -9,7 +9,7 @@
 #### Admin
 - Admin can view orders in their dashboard
 - Admin can confirm/reject orders
-- Admin can submit returned items requests and if the request is accepted, the returned item paper is printed
+- Admin can accept/reject returned items requests and if the request is accepted, the returned item paper is printed
 #### Customer
 - Customer can add/delete/update orders to their cart
 - Customer can add/cancel/update orders until it's accepted by the admin
