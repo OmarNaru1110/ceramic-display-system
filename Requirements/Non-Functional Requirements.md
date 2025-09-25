@@ -1,4 +1,4 @@
-1. Low latency in viewing ceramic & sorting & filtering
+1. Low latency in viewing products & sorting & filtering
 2. Availability >> Consistency
-3. logging
-4. read >> write
+3. read >> write
+4. Logging
