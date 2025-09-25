@@ -20,7 +20,8 @@
   ```
   days_required,
   percentage,
-  product_id
+  product_id,
+  createdDate
 - size
     ```
     length,
