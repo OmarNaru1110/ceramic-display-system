@@ -15,13 +15,15 @@
   SRT,
   thickness,
   price (per sqm),
-  surface_finish_id
+  surface_finish_id,
+  discount,
+  created_date
 - discount
   ```
+  id,
   days_required,
   percentage,
-  product_id,
-  createdDate
+  created_date
 - size
     ```
     length,
