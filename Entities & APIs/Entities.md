@@ -14,7 +14,8 @@
   PEI (enum),
   SRT,
   thickness,
-  price (per sqm)
+  price (per sqm),
+  surface_finish_id
 - discount
   ```
   days_required,
