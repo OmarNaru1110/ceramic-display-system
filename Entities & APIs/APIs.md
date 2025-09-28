@@ -9,7 +9,7 @@ POST /api/auth/register
     username: string,
     email: string,
     password: string,
-    role: "admin"
+    role: "admin" | "seller"
 }
 Response: {
     user_id: int,
@@ -54,11 +54,8 @@ Headers: Authorization: Bearer {admin_token}
         length: float,
         width: float
     },
-    pei: "PEI1" | "PEI2" | "PEI3" | "PEI4" | "PEI5",
-    srt: float,
-    thickness: float,
+    pieces_per_box: int,
     price_per_sqm: float,
-    surface_finish_id: int,
     images: [string] // URLs or base64
 }
 Response: {
@@ -81,11 +78,8 @@ Headers: Authorization: Bearer {admin_token}
         length: float,
         width: float
     },
-    pei?: "PEI1" | "PEI2" | "PEI3" | "PEI4" | "PEI5",
-    srt?: float,
-    thickness?: float,
+    pieces_per_box?: int,
     price_per_sqm?: float,
-    surface_finish_id?: int,
     images?: [string]
 }
 Response: {
@@ -103,7 +97,7 @@ Response: {
 }
 ```
 
-## Product Viewing (Customer & Admin)
+## Product Viewing (ALL)
 
 ### Get Single Product Details
 ```
@@ -119,28 +113,21 @@ Response: {
         length: float,
         width: float
     },
-    pei: string,
-    srt: float,
-    thickness: float,
+    pieces_per_box: int,
     price_per_sqm: float,
-    surface_finish: {
-        id: int,
-        name: string
-    },
     images: [string],
-    discounts: [{
+    discount: {
         id: int,
         percentage: float,
-        days_required: int
-    }],
-    created_at: datetime,
-    updated_at: datetime
+        days_required: int,
+    },
+    created_date: datetime
 }
 ```
 
 ### Get Products with Filters and Search
 ```
-GET /api/products?query={search_term}&category={category}&type={type}&quality_grade={grade}&price_min={min}&price_max={max}&pei={pei}&sort_by={field}&sort_order={asc|desc}&page={page}&limit={limit}
+GET /api/products?category={category}&type={type}&quality_grade={grade}&price_min={min}&price_max={max}&sort_by={field}&sort_order={asc|desc}&page={page}&limit={limit}
 
 Query Parameters:
 - query: string (search in product name)
@@ -149,8 +136,7 @@ Query Parameters:
 - quality_grade: "A" | "B" | "C"
 - price_min: float
 - price_max: float
-- pei: "PEI1" | "PEI2" | "PEI3" | "PEI4" | "PEI5"
-- sort_by: "name" | "price_per_sqm" | "quality_grade" | "created_at"
+- sort_by: "name" | "price_per_sqm" | "quality_grade" | "created_date"
 - sort_order: "asc" | "desc"
 - page: int (default: 1)
 - limit: int (default: 20)
@@ -163,8 +149,8 @@ Response: {
         category: string,
         type: string,
         quantity: int,
+        pieces_per_box: int,
         price_per_sqm: float,
-        surface_finish: string,
         images: [string],
         has_discount: boolean
     }],
@@ -175,53 +161,6 @@ Response: {
         has_next: boolean,
         has_previous: boolean
     }
-}
-```
-
-## Surface Finish Management (Admin Only)
-
-### Create Surface Finish
-```
-POST /api/surface-finishes
-Headers: Authorization: Bearer {admin_token}
-{
-    name: string
-}
-Response: {
-    surface_finish_id: int,
-    message: string
-}
-```
-
-### Get All Surface Finishes
-```
-GET /api/surface-finishes
-Response: {
-    surface_finishes: [{
-        id: int,
-        name: string
-    }]
-}
-```
-
-### Update Surface Finish
-```
-PUT /api/surface-finishes/{surface_finish_id}
-Headers: Authorization: Bearer {admin_token}
-{
-    name: string
-}
-Response: {
-    message: string
-}
-```
-
-### Delete Surface Finish
-```
-DELETE /api/surface-finishes/{surface_finish_id}
-Headers: Authorization: Bearer {admin_token}
-Response: {
-    message: string
 }
 ```
 
@@ -246,12 +185,12 @@ Response: {
 ```
 GET /api/products/{product_id}/discounts
 Response: {
-    discounts: [{
+    discount: {
         id: int,
         percentage: float,
         days_required: int,
-        created_at: datetime
-    }]
+        created_date: datetime
+    }
 }
 ```
 
@@ -277,6 +216,359 @@ Response: {
 }
 ```
 
+## Order Management (Admin Only)
+
+### Get All Orders
+```
+GET /api/admin/orders?status={status}&page={page}&limit={limit}
+Headers: Authorization: Bearer {admin_token}
+
+Query Parameters:
+- status: "pending" | "confirmed" | "rejected" | "completed"
+- page: int (default: 1)
+- limit: int (default: 20)
+
+Response: {
+    orders: [{
+        order_id: int,
+        seller_id: int,
+        seller_name: string,
+        customer_name: string,
+        customer_contact: string,
+        items: [{
+            product_id: int,
+            product_name: string,
+            quantity: int,
+            price_per_sqm: float,
+            total_price: float
+        }],
+        total_amount: float,
+        status: string,
+        order_date: datetime,
+        updated_at: datetime
+    }],
+    pagination: {
+        current_page: int,
+        total_pages: int,
+        total_orders: int
+    }
+}
+```
+
+### Get Single Order Details
+```
+GET /api/admin/orders/{order_id}
+Headers: Authorization: Bearer {admin_token}
+Response: {
+    order_id: int,
+    seller_id: int,
+    seller_name: string,
+    customer_name: string,
+    customer_contact: string,
+    customer_address: string,
+    items: [{
+        product_id: int,
+        product_name: string,
+        category: string,
+        quantity: int,
+        price_per_sqm: float,
+        total_price: float,
+        product_images: [string]
+    }],
+    total_amount: float,
+    status: string,
+    order_date: datetime,
+    notes: string
+}
+```
+
+### Confirm Order
+```
+PUT /api/admin/orders/{order_id}/confirm
+Headers: Authorization: Bearer {admin_token}
+{
+    notes?: string
+}
+Response: {
+    order_id: int,
+    status: "confirmed",
+    invoice_id: int,
+    message: string
+}
+```
+
+### Reject Order
+```
+PUT /api/admin/orders/{order_id}/reject
+Headers: Authorization: Bearer {admin_token}
+{
+    rejection_reason: string
+}
+Response: {
+    order_id: int,
+    status: "rejected",
+    message: string
+}
+```
+
+## Cart Management (Seller Only)
+
+### Get Cart
+```
+GET /api/seller/cart
+Headers: Authorization: Bearer {seller_token}
+Response: {
+    cart_id: int,
+    items: [{
+        cart_item_id: int,
+        product_id: int,
+        product_name: string,
+        category: string,
+        price_per_sqm: float,
+        quantity: int,
+        total_price: float,
+        product_images: [string]
+    }],
+    total_amount: float,
+    item_count: int
+}
+```
+
+### Add Item to Cart
+```
+POST /api/seller/cart/items
+Headers: Authorization: Bearer {seller_token}
+{
+    product_id: int,
+    quantity: int
+}
+Response: {
+    cart_item_id: int,
+    message: string
+}
+```
+
+### Update Cart Item
+```
+PUT /api/seller/cart/items/{cart_item_id}
+Headers: Authorization: Bearer {seller_token}
+{
+    quantity: int
+}
+Response: {
+    cart_item_id: int,
+    message: string
+}
+```
+
+### Remove Item from Cart
+```
+DELETE /api/seller/cart/items/{cart_item_id}
+Headers: Authorization: Bearer {seller_token}
+Response: {
+    message: string
+}
+```
+
+### Clear Cart //remove all cart items from cart
+```
+DELETE /api/seller/cart
+Headers: Authorization: Bearer {seller_token}
+Response: {
+    message: string
+}
+```
+
+## Order Management (Seller Only)
+
+### Create Order from Cart
+```
+POST /api/seller/orders
+Headers: Authorization: Bearer {seller_token}
+{
+    customer_name: string,
+    customer_contact: string,
+    customer_address: string,
+    notes?: string
+}
+Response: {
+    order_id: int,
+    total_amount: float,
+    status: "pending",
+    message: string
+}
+```
+
+### Get Seller Orders
+```
+GET /api/seller/orders?status={status}&page={page}&limit={limit}
+Headers: Authorization: Bearer {seller_token}
+
+Query Parameters:
+- status: "pending" | "confirmed" | "rejected" | "completed"
+- page: int (default: 1)
+- limit: int (default: 20)
+
+Response: {
+    orders: [{
+        order_id: int,
+        customer_name: string,
+        total_amount: float,
+        status: string,
+        order_date: datetime,
+        item_count: int
+    }],
+    pagination: {
+        current_page: int,
+        total_pages: int,
+        total_orders: int
+    }
+}
+```
+
+### Update Order (Before Confirmation)
+```
+PUT /api/seller/orders/{order_id}
+Headers: Authorization: Bearer {seller_token}
+{
+    customer_name?: string,
+    customer_contact?: string,
+    customer_address?: string,
+    notes?: string
+}
+Response: {
+    order_id: int,
+    message: string
+}
+```
+
+### Cancel Order
+```
+DELETE /api/seller/orders/{order_id}
+Headers: Authorization: Bearer {seller_token}
+Response: {
+    message: string
+}
+```
+
+## Return Management
+
+### Submit Return Request (Seller)
+```
+POST /api/seller/returns
+Headers: Authorization: Bearer {seller_token}
+{
+    order_id: int,
+    items: [{
+        product_id: int,
+        quantity: int,
+        reason: string
+    }],
+    return_reason: string,
+    description?: string
+}
+Response: {
+    return_id: int,
+    status: "pending",
+    message: string
+}
+```
+
+### Get Return Requests (Admin)
+```
+GET /api/admin/returns?status={status}&page={page}&limit={limit}
+Headers: Authorization: Bearer {admin_token}
+
+Response: {
+    returns: [{
+        return_id: int,
+        order_id: int,
+        seller_name: string,
+        customer_name: string,
+        items: [{
+            product_name: string,
+            quantity: int,
+            reason: string
+        }],
+        return_reason: string,
+        status: string,
+        request_date: datetime
+    }]
+}
+```
+
+### Accept Return Request (Admin)
+```
+PUT /api/admin/returns/{return_id}/accept
+Headers: Authorization: Bearer {admin_token}
+{
+    admin_notes?: string
+}
+Response: {
+    return_id: int,
+    status: "accepted",
+    return_paper_url: string,
+    message: string
+}
+```
+
+### Reject Return Request (Admin)
+```
+PUT /api/admin/returns/{return_id}/reject
+Headers: Authorization: Bearer {admin_token}
+{
+    rejection_reason: string
+}
+Response: {
+    return_id: int,
+    status: "rejected",
+    message: string
+}
+```
+
+## Invoice Management
+
+### Get Invoice
+```
+GET /api/invoices/{invoice_id}
+Headers: Authorization: Bearer {token}
+Response: {
+    invoice_id: int,
+    order_id: int,
+    invoice_number: string,
+    customer_name: string,
+    customer_address: string,
+    items: [{
+        product_name: string,
+        quantity: int,
+        price_per_sqm: float,
+        total_price: float
+    }],
+    subtotal: float,
+    tax_amount: float,
+    total_amount: float,
+    invoice_date: datetime,
+    pdf_url: string,
+    status: "generated" | "printed"
+}
+```
+
+### Download Invoice PDF
+```
+GET /api/invoices/{invoice_id}/pdf
+Headers: Authorization: Bearer {token}
+Response: PDF file download
+```
+
+### Print Invoice (Admin)
+```
+POST /api/admin/invoices/{invoice_id}/print
+Headers: Authorization: Bearer {admin_token}
+Response: {
+    message: string,
+    print_status: "sent_to_printer"
+}
+```
 ## Dashboard APIs (Admin Only)
 
 ### Get Admin Dashboard Stats
@@ -285,62 +577,20 @@ GET /api/admin/dashboard
 Headers: Authorization: Bearer {admin_token}
 Response: {
     total_products: int,
-    products_by_category: {
+    orders: {
         floor: int,
         walls: int,
         bathroom: int,
         kitchen: int
     },
-    products_by_type: {
+    invoices: {
         ceramic: int,
         porcelain: int
     },
-    low_stock_products: [{
+    returned_items: [{
         product_id: int,
         name: string,
         quantity: int
-    }],
-    recent_products: [{
-        product_id: int,
-        name: string,
-        created_at: datetime
     }]
-}
-```
-
-## Error Responses
-
-All APIs may return the following error responses:
-
-```
-400 Bad Request
-{
-    error: "Bad Request",
-    message: "Invalid input data",
-    details: [string]
-}
-
-401 Unauthorized
-{
-    error: "Unauthorized",
-    message: "Authentication required"
-}
-
-403 Forbidden
-{
-    error: "Forbidden",
-    message: "Insufficient permissions"
-}
-
-404 Not Found
-{
-    error: "Not Found",
-    message: "Resource not found"
-}
-
-500 Internal Server Error
-{
-    error: "Internal Server Error",
-    message: "Something went wrong"
 }
 ```
