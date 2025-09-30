@@ -51,7 +51,10 @@ namespace API
                 // Configure Entity Framework with SQL Server
                 builder.Services.AddDbContext<AppDbContext>(options =>
                 {
-                    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+                    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), builder =>
+                    {
+                        builder.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
+                    });
                     
                     // Enable detailed errors in development
                     if (builder.Environment.IsDevelopment())

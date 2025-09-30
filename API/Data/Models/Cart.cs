@@ -1,17 +1,20 @@
-﻿using DATA.Models.Contract;
-using Data.Models.Enums;
-using Microsoft.AspNetCore.Identity;
+using DATA.Models.Contract;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Data.Models
 {
-    public class AppUser : IdentityUser<int>, ISoftDeleteable
+    public class Cart : ISoftDeleteable
     {
+        public int Id { get; set; }
+
+        [Required]
+        public int SellerId { get; set; }
 
         [Required]
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
@@ -21,8 +24,7 @@ namespace Data.Models
         public DateTime? DateDeleted { get; set; }
 
         // Navigation properties
-        public virtual ICollection<Product> Products { get; set; } = new List<Product>(); // user : product 1:m
-        public virtual ICollection<Order> Orders { get; set; } = new List<Order>(); // user : order 1:m
-        public virtual Cart? Cart { get; set; } // user : cart 1:1
+        public virtual AppUser? AppUser { get; set; } // appuser : cart 1:1
+        public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>(); // cart : cart_item 1:m
     }
 }
