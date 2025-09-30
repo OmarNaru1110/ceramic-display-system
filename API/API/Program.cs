@@ -3,12 +3,14 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Data.Models;
 using Serilog;
+using API.Services;
+using API.Configuration;
 
 namespace API
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             // Create initial logger
             Log.Logger = new LoggerConfiguration()
@@ -47,6 +49,10 @@ namespace API
                         .WriteTo.Console()
                         .WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day)
                 );
+
+                // Configure options
+                builder.Services.Configure<DefaultAdminOptions>(
+                    builder.Configuration.GetSection(DefaultAdminOptions.SectionName));
 
                 // Configure Entity Framework with SQL Server
                 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -91,6 +97,9 @@ namespace API
                 .AddEntityFrameworkStores<AppDbContext>()
                 .AddDefaultTokenProviders();
 
+                // Register DatabaseInitializer service
+                builder.Services.AddScoped<DatabaseInitializer>();
+
                 // Add services to the container.
                 builder.Services.AddControllers();
                 
@@ -121,19 +130,19 @@ namespace API
                     app.UseDeveloperExceptionPage();
                 }
 
-                // Apply database migrations automatically
+                // Initialize database with roles and admin user
                 using (var scope = app.Services.CreateScope())
                 {
-                    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                    var databaseInitializer = scope.ServiceProvider.GetRequiredService<DatabaseInitializer>();
                     try
                     {
-                        Log.Information("Applying database migrations...");
-                        dbContext.Database.Migrate();
-                        Log.Information("Database migrations applied successfully");
+                        Log.Information("Initializing database...");
+                        await databaseInitializer.InitializeAsync();
+                        Log.Information("Database initialized successfully");
                     }
                     catch (Exception ex)
                     {
-                        Log.Error(ex, "An error occurred while applying database migrations");
+                        Log.Error(ex, "An error occurred while initializing the database");
                         throw;
                     }
                 }
