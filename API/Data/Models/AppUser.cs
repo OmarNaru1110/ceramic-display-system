@@ -7,6 +7,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using DATA.Models;
 
 namespace Data.Models
 {
@@ -24,5 +25,6 @@ namespace Data.Models
         public virtual ICollection<Product> Products { get; set; } = new List<Product>(); // user : product 1:m
         public virtual ICollection<Order> Orders { get; set; } = new List<Order>(); // user : order 1:m
         public virtual Cart? Cart { get; set; } // user : cart 1:1
+        public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>(); // user : refresh_token 1:m
     }
 }

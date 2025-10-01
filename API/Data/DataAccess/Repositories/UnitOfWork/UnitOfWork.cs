@@ -1,4 +1,5 @@
-﻿using DATA.DataAccess.Context;
+﻿using Data.Models;
+using DATA.DataAccess.Context;
 using DATA.DataAccess.Repositories.IRepositories;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
@@ -15,7 +16,9 @@ namespace Data.DataAccess.Repositories.UnitOfWork
         private readonly AppDbContext _context;
         private readonly ILogger<UnitOfWork> _logger;
         private IDbContextTransaction _transaction;
-        
+
+        public IBaseRepository<AppUser> AppUsers { get; private set; }
+
         public UnitOfWork(AppDbContext context, ILogger<UnitOfWork> logger)
         {
             _context = context;

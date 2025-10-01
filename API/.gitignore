@@ -25,3 +25,5 @@ wwwroot/*
 !wwwroot/EmailTemplates/
 !wwwroot/EmailTemplates/**
 Logs/
+appsettings.*.json
+!appsettings.json
