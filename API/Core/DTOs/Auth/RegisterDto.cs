@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace CORE.DTOs.Auth
@@ -21,6 +22,7 @@ namespace CORE.DTOs.Auth
         public string? Address { get; set; }
 
         [Required]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public UserRole Role { get; set; }
     }
 }
