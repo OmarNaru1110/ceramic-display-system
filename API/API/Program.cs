@@ -1,10 +1,23 @@
+using API.Configuration;
+using API.Services;
+using AutoMapper;
+using CORE.DTOs.Auth;
+using CORE.Services;
+using CORE.Services.IServices;
+using Data.DataAccess.Repositories.UnitOfWork;
+using Data.Models;
 using DATA.DataAccess.Context;
+using DATA.DataAccess.Repositories;
+using DATA.DataAccess.Repositories.IRepositories;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Data.Models;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 using Serilog;
-using API.Services;
-using API.Configuration;
+using System.Text;
+using System.Reflection;
+using Microsoft.OpenApi.Models;
 
 namespace API
 {
@@ -97,6 +110,35 @@ namespace API
                 .AddEntityFrameworkStores<AppDbContext>()
                 .AddDefaultTokenProviders();
 
+                // Configure Swagger to use JWT Bearer token
+                builder.Services.AddSwaggerGen(c =>
+                {
+                    c.SwaggerDoc("v1", new OpenApiInfo { Title = "AggarAPI", Version = "v1" });
+
+                    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                    {
+                        In = ParameterLocation.Header,
+                        Description = "Please enter JWT with Bearer into field",
+                        Name = "Authorization",
+                        Type = SecuritySchemeType.ApiKey,
+                        BearerFormat = "JWT",
+                        Scheme = "Bearer"
+                    });
+
+                    c.AddSecurityRequirement(new OpenApiSecurityRequirement{
+                {
+                    new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                        }
+                    },
+                    new string[] {}
+                    }});
+                });
+
                 // Register DatabaseInitializer service
                 builder.Services.AddScoped<DatabaseInitializer>();
 
@@ -118,6 +160,63 @@ namespace API
                     });
                 });
 
+                builder.Services.AddAuthentication(options =>
+                {
+                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                })
+                .AddJwtBearer(options =>
+                {
+                    options.RequireHttpsMetadata = true;
+                    options.SaveToken = false;
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuerSigningKey = true,
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidateLifetime = true,
+                        ValidIssuer = builder.Configuration["JWT:Issuer"],
+                        ValidAudience = builder.Configuration["JWT:Audience"],
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"]))
+                    };
+
+                    options.Events = new JwtBearerEvents
+                    {
+                        OnMessageReceived = context =>
+                        {
+                            var accessToken = context.Request.Query["access_token"];
+                            var path = context.HttpContext.Request.Path;
+
+                            // Read the token for SignalR connections
+                            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/Chat"))
+                            {
+                                context.Token = accessToken;
+                            }
+                            // Read the token for SignalR connections
+                            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/Notification"))
+                            {
+                                context.Token = accessToken;
+                            }
+                            return Task.CompletedTask;
+                        }
+                    };
+
+                });
+                builder.Services.AddAuthorization();
+
+                // Register application services
+
+                builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("JWT"));
+
+                // Configure AutoMapper
+                builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
+                builder.Services.AddScoped(typeof(IBaseRepository<>), typeof(BaseRepository<>));
+                builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+                builder.Services.AddScoped<IAuthService, AuthService>();
+                builder.Services.AddMemoryCache();
+                builder.Services.AddOutputCache();
+
                 var app = builder.Build();
 
                 // Add Serilog request logging
@@ -129,6 +228,10 @@ namespace API
                     app.MapOpenApi();
                     app.UseDeveloperExceptionPage();
                 }
+
+                // Configure the HTTP request pipeline.
+                app.UseSwagger();
+                app.UseSwaggerUI();
 
                 // Initialize database with roles and admin user
                 using (var scope = app.Services.CreateScope())
