@@ -1,4 +1,4 @@
-﻿using Data.Models;
+using Data.Models;
 using DATA.DataAccess.Repositories.IRepositories;
 using DATA.Models;
 using System;
@@ -12,6 +12,8 @@ namespace Data.DataAccess.Repositories.UnitOfWork
     public interface IUnitOfWork : IDisposable
     {
         IBaseRepository<AppUser> AppUsers { get; }
+        IBaseRepository<Product> Products { get; }
+
         Task<int> CommitAsync();
 
         Task BeginTransactionAsync();
