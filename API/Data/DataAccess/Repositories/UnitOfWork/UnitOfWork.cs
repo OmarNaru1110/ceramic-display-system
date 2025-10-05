@@ -1,4 +1,4 @@
-﻿using Data.Models;
+using Data.Models;
 using DATA.DataAccess.Context;
 using DATA.DataAccess.Repositories.IRepositories;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -18,6 +18,8 @@ namespace Data.DataAccess.Repositories.UnitOfWork
         private IDbContextTransaction _transaction;
 
         public IBaseRepository<AppUser> AppUsers { get; private set; }
+
+        public IBaseRepository<Product> Products { get; private set; }
 
         public UnitOfWork(AppDbContext context, ILogger<UnitOfWork> logger)
         {

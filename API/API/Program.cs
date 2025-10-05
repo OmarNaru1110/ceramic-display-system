@@ -1,6 +1,10 @@
+using System.Reflection;
+using System.Text;
 using API.Configuration;
 using API.Services;
 using AutoMapper;
+using Core.Services;
+using Core.Services.IServices;
 using CORE.DTOs.Auth;
 using CORE.Services;
 using CORE.Services.IServices;
@@ -14,10 +18,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using Serilog;
-using System.Text;
-using System.Reflection;
 using Microsoft.OpenApi.Models;
+using Serilog;
 
 namespace API
 {
@@ -214,8 +216,7 @@ namespace API
                 builder.Services.AddScoped(typeof(IBaseRepository<>), typeof(BaseRepository<>));
                 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
                 builder.Services.AddScoped<IAuthService, AuthService>();
-                builder.Services.AddMemoryCache();
-                builder.Services.AddOutputCache();
+                builder.Services.AddScoped<IProductService, ProductService>();
 
                 var app = builder.Build();
 

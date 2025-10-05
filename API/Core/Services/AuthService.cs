@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using CORE.DTOs.Auth;
 using CORE.Services.IServices;
 using DATA.Models;
@@ -34,7 +34,6 @@ namespace CORE.Services
         private readonly IConfiguration _configuration;
         private readonly IMapper _mapper;
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IMemoryCache _memoryCache;
         private readonly ILogger<AuthService> _logger;
 
         public AuthService(IOptions<JwtConfig> jwt,
@@ -42,7 +41,6 @@ namespace CORE.Services
             IConfiguration configuration,
             IMapper mapper,
             IUnitOfWork unitOfWork,
-            IMemoryCache memoryCache,
             ILogger<AuthService> logger)
         {
             _jwt = jwt;
@@ -50,7 +48,6 @@ namespace CORE.Services
             _configuration = configuration;
             _mapper = mapper;
             _unitOfWork = unitOfWork;
-            _memoryCache = memoryCache;
             _logger = logger;
         }
         private async Task<string?> ValidateRegistrationAsync(RegisterDto registerDto)
