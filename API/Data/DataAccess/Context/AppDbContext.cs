@@ -1,4 +1,5 @@
-﻿using Data.Models;
+using System.Linq.Expressions;
+using Data.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -33,6 +34,33 @@ namespace DATA.DataAccess.Context
 
             // Apply all configurations from the assembly
             builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+
+            ApplyGlobalSoftDeleteFilters(builder);
+        }
+
+        private static void ApplyGlobalSoftDeleteFilters(ModelBuilder builder)
+        {
+            foreach (var entityType in builder.Model.GetEntityTypes())
+            {
+                // Skip owned/entity types (e.g., Product.Size)
+                if (entityType.IsOwned())
+                    continue;
+
+                var clrType = entityType.ClrType;
+
+                // Only apply to types that have a public bool IsDeleted property
+                var isDeletedProp = clrType.GetProperty("IsDeleted");
+                if (isDeletedProp == null || isDeletedProp.PropertyType != typeof(bool))
+                    continue;
+
+                var parameter = Expression.Parameter(clrType, "e");
+                var prop = Expression.Property(parameter, isDeletedProp);
+                var body = Expression.Equal(prop, Expression.Constant(false));
+                var lambda = Expression.Lambda(body, parameter);
+
+                builder.Entity(clrType).HasQueryFilter(lambda);
+            }
+
         }
     }
 }

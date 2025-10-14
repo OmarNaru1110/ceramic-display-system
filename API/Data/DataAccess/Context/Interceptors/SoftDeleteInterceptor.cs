@@ -1,5 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using DATA.Models.Contract;
 
 namespace DATA.DataAccess.Context.Interceptors
@@ -14,56 +15,71 @@ namespace DATA.DataAccess.Context.Interceptors
             if (eventData.Context is null)
                 return result;
 
-            foreach (var entry in eventData.Context.ChangeTracker.Entries())
-            {
-                if (entry is { State: EntityState.Deleted, Entity: ISoftDeleteable entity })
-                {
-                    entry.State = EntityState.Modified;
-
-                    entity.Delete();
-
-                    /*foreach (var property in entry.Properties)
-                    {
-                        string propertyName = property.Metadata.Name;
-
-                        if (propertyName != "IsDeleted" && propertyName != "DateDeleted")
-                        {
-                            property.IsModified = false;
-                        }
-                    }*/
-                }
-            }
-
+            ProcessSoftDeletes(eventData.Context);
             return result;
         }
 
         public override InterceptionResult<int> SavingChanges(
-            DbContextEventData eventData, InterceptionResult<int> result)
+            DbContextEventData eventData,
+            InterceptionResult<int> result)
         {
             if (eventData.Context is null)
                 return result;
 
-            foreach (var entry in eventData.Context.ChangeTracker.Entries())
+            ProcessSoftDeletes(eventData.Context);
+            return result;
+        }
+
+        private static void ProcessSoftDeletes(DbContext context)
+        {
+            foreach (var entry in context.ChangeTracker.Entries())
             {
-                if (entry is not { State: EntityState.Deleted, Entity: ISoftDeleteable entity })
+                if (entry.State != EntityState.Deleted || entry.Entity is not ISoftDeleteable soft)
                     continue;
 
-                entry.State = EntityState.Modified;
+                // 1) Do not delete row; we only want to update two columns
+                entry.State = EntityState.Unchanged;
 
-                entity.Delete();
+                // 2) Set soft-delete flags
+                soft.Delete();
 
-                /*foreach (var property in entry.Properties)
+                // 3) Mark only soft-delete props as modified
+                entry.Property("IsDeleted").IsModified = true;
+                entry.Property("DateDeleted").IsModified = true;
+
+                // 4) Ensure owned navigations are not considered deleted/modified
+                SetOwnedEntriesUnchanged(entry);
+            }
+        }
+
+        private static void SetOwnedEntriesUnchanged(EntityEntry ownerEntry)
+        {
+            // Handle single owned references (e.g., Product.Size)
+            foreach (var reference in ownerEntry.References)
+            {
+                var target = reference.TargetEntry;
+                if (target is not null && target.Metadata.IsOwned())
                 {
-                    string propertyName = property.Metadata.Name;
-
-                    if (propertyName != "IsDeleted" && propertyName != "DateDeleted")
-                    {
-                        property.IsModified = false;
-                    }
-                }*/
+                    target.State = EntityState.Unchanged;
+                }
             }
 
-            return result;
+            // Handle owned collections if any (e.g., owned collection types)
+            foreach (var collection in ownerEntry.Collections)
+            {
+                if (!collection.Metadata.TargetEntityType.IsOwned())
+                    continue;
+
+                // Do NOT force-load; only adjust already tracked dependents
+                if (collection.IsLoaded && collection.CurrentValue is IEnumerable<object> dependents)
+                {
+                    foreach (var dependent in dependents)
+                    {
+                        var depEntry = ownerEntry.Context.Entry(dependent);
+                        depEntry.State = EntityState.Unchanged;
+                    }
+                }
+            }
         }
     }
 }

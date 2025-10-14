@@ -1,4 +1,4 @@
-﻿namespace DATA.Models.Contract
+namespace DATA.Models.Contract
 {
     internal interface ISoftDeleteable
     {

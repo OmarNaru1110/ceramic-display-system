@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,5 +17,6 @@ namespace CORE.Constants
         public const int NotFound = 404;
         public const int Conflict = 409;
         public const int InternalServerError = 500;
+        public const int NotImplemented = 501;
     }
 }
