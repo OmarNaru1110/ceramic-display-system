@@ -36,7 +36,6 @@ Prerequisites
 Start services
 
 ```powershell
-# from repo root
 docker-compose up -d
 ```
 
