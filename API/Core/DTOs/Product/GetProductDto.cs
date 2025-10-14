@@ -34,4 +34,6 @@ public class GetProductDto
 
     public int AdminId { get; set; } // user : product 1:m
     public DateTime CreatedDate { get; set; }
+    
+    public IEnumerable<ProductImageDto> ProductImages { get; set; } = new List<ProductImageDto>();
 }
