@@ -38,19 +38,55 @@ services:
       IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'ceramic-display-db')
       BEGIN
           CREATE DATABASE [ceramic-display-db];
-          PRINT 'Database ceramic-display-db created successfully';
-      END
-      ELSE
-      BEGIN
-          PRINT 'Database ceramic-display-db already exists';
       END
       \";
-      if [ \$$? -eq 0 ]; then
-        echo 'Database ceramic-display-db created successfully!';
-      else
-        echo 'Failed to create database';
-        exit 1;
-      fi
+      "
+    networks:
+      - ceramic-network
+    restart: "no"
+
+  adminer:
+    image: adminer:latest
+    container_name: adminer-ui
+    ports:
+      - "8080:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=sqlserver
+    depends_on:
+      - sqlserver
+    networks:
+      - ceramic-network
+    restart: unless-stopped
+
+  minio:
+    image: quay.io/minio/minio
+    container_name: minio-storage
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=password123
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - ceramic-network
+    restart: unless-stopped
+
+  createbucket:
+    image: minio/mc:latest
+    container_name: minio-createbucket
+    depends_on:
+      minio:
+        condition: service_started
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      mc alias set local http://minio:9000 admin password123;
+      mc mb -p local/ceramic-display-system-bucket || true;
+      echo '✅ Bucket ceramic-display-system-bucket created (or already exists)';
+      exit 0;
       "
     networks:
       - ceramic-network
@@ -64,18 +100,65 @@ services:
     depends_on:
       sqlserver:
         condition: service_healthy
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=ceramic-display-db;User Id=sa;Password=YourStrong@Password123;TrustServerCertificate=True;Encrypt=True;
+      minio:
+        condition: service_started
+      createbucket:
+        condition: service_completed_successfully
     ports:
       - "5000:80"
     networks:
       - ceramic-network
     restart: unless-stopped
+    environment:
+      # ASP.NET Core setup
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
 
+      # ----------------------
+      # 🔐 JWT Configuration
+      # ----------------------
+      - JWT__Issuer=https://ceramic-display.local
+      - JWT__Audience=https://ceramic-display.local
+      - JWT__Key=SuperStrongSecretKeyThatShouldBeLong
+      - JWT__ExpiryInMinutes=60
+
+      # ----------------------
+      # 🗄️ Database Connection
+      # ----------------------
+      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=ceramic-display-db;User Id=sa;Password=YourStrong@Password123;TrustServerCertificate=True;Encrypt=True;
+
+      # ----------------------
+      # 🪣 AWS/MinIO Configuration
+      # ----------------------
+      - AWS__AccessKey=admin
+      - AWS__SecretKey=password123
+      - AWS__Profile=default
+      - AWS__Region=us-east-1
+      - AWS__S3__BucketName=ceramic-display-system-bucket
+      - AWS__S3__Region=us-east-1
+      - AWS__S3__ServiceURL=http://minio:9000
+
+      # ----------------------
+      # 👨‍💼 Default Admin Creation (Optional)
+      # ----------------------
+      - DefaultAdmin__Email=admin@ceramic.local
+      - DefaultAdmin__Password=Admin@123
+      - DefaultAdmin__UserName=Admin
+
+      # ----------------------
+      # 📜 Serilog (Optional)
+      # ----------------------
+      - Serilog__MinimumLevel__Default=Information
+      - Serilog__WriteTo__0__Name=Console
+      
+      # ----------------------
+      # 👨‍💼 Refresh token Cleanup
+      # ----------------------
+      - RefreshTokenCleanup__IntervalHours=1
+      - RefreshTokenCleanup__InitialDelayMinutes=1
 volumes:
   sqlserver_data:
+  minio-data:
 
 networks:
   ceramic-network:
