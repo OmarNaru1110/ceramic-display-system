@@ -15,5 +15,6 @@ public class ProductProfile : Profile
         CreateMap<CreateProductDto, Product>();
         CreateMap<UpdateProductDto, Product>();
         CreateMap<Product, GetProductDto>();
+        CreateMap<ProductImage, ProductImageDto>();
     }
 }

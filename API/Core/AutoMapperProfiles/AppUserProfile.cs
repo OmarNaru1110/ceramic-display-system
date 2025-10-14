@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using CORE.DTOs.AppUser;
 using CORE.DTOs.Auth;
 using Data.Models;
@@ -21,6 +21,7 @@ namespace CORE.AutoMapperProfiles
                 .ReverseMap();
 
             CreateMap<AppUser, UserProfileDto>();
+            CreateMap<AppUser, GetUserDto>();
         }
     }
 }
