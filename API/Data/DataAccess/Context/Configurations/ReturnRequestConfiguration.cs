@@ -29,6 +29,9 @@ namespace DATA.DataAccess.Context.Configurations
             builder.Property(rr => rr.AdminNotes)
                 .HasMaxLength(1000);
 
+            builder.Property(rr => rr.ReturnPdfUrl)
+                .HasMaxLength(500);
+
             // Relationships
             // return_request : return_item 1:m
             builder.HasMany(rr => rr.ReturnItems)

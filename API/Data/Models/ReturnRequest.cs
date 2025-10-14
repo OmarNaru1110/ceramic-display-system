@@ -30,6 +30,9 @@ namespace Data.Models
 
         public string? AdminNotes { get; set; }
 
+        // New: URL to the generated return request PDF
+        public string? ReturnPdfUrl { get; set; }
+
         // ISoftDeleteable implementation
         public bool IsDeleted { get; set; } = false;
         public DateTime? DateDeleted { get; set; }

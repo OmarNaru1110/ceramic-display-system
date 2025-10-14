@@ -1,4 +1,4 @@
-﻿using DATA.Models.Contract;
+using DATA.Models.Contract;
 using Data.Models.Enums;
 using Microsoft.AspNetCore.Identity;
 using System;

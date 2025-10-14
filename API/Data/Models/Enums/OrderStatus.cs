@@ -11,6 +11,7 @@ namespace Data.Models.Enums
         Pending,
         Confirmed,
         Rejected,
-        Completed
+        Completed,
+        Cancelled
     }
 }
