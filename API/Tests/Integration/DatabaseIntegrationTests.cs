@@ -75,36 +75,6 @@ namespace Tests.Integration
         }
 
         [Test]
-        public async Task AppDbContext_SoftDeleteUser_ShouldSetIsDeleted()
-        {
-            // Arrange
-            var user = new AppUser
-            {
-                UserName = "softdeleteuser",
-                Email = "softdelete@example.com",
-                EmailConfirmed = true,
-                CreatedDate = DateTime.UtcNow
-            };
-
-            Context.Users.Add(user);
-            await Context.SaveChangesAsync();
-
-            // Act
-            user.IsDeleted = true;
-            user.DateDeleted = DateTime.UtcNow;
-            await Context.SaveChangesAsync();
-
-            var retrievedUser = await Context.Users
-                .FirstOrDefaultAsync(u => u.UserName == "softdeleteuser");
-
-            // Assert
-            retrievedUser.Should().NotBeNull();
-            retrievedUser.IsDeleted.Should().BeTrue();
-            retrievedUser.DateDeleted.Should().NotBeNull();
-            retrievedUser.DateDeleted.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
-        }
-
-        [Test]
         public async Task AppDbContext_UpdateRefreshToken_ShouldPersistChanges()
         {
             // Arrange

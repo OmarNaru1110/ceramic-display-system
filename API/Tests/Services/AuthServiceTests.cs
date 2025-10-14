@@ -62,7 +62,6 @@ namespace Tests.Services
                 Configuration, // Use the real IConfiguration instead of MockConfiguration
                 MockMapper.Object,
                 MockUnitOfWork.Object,
-                MemoryCache,
                 MockLogger.Object);
         }
 
