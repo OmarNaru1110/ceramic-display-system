@@ -11,6 +11,7 @@ using CORE.Services.IServices;
 using Data.DataAccess.Repositories.UnitOfWork;
 using Data.Models;
 using DATA.DataAccess.Context;
+using DATA.DataAccess.Context.Interceptors;
 using DATA.DataAccess.Repositories;
 using DATA.DataAccess.Repositories.IRepositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -20,6 +21,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using Amazon.S3;
+using Amazon.Extensions.NETCore.Setup;
+using Microsoft.AspNetCore.SignalR;
+using API.Hubs;
 
 namespace API
 {
@@ -76,6 +81,9 @@ namespace API
                     {
                         builder.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
                     });
+                    
+                    // Add soft delete interceptor
+                    options.AddInterceptors(new SoftDeleteInterceptor());
                     
                     // Enable detailed errors in development
                     if (builder.Environment.IsDevelopment())
@@ -190,12 +198,7 @@ namespace API
                             var path = context.HttpContext.Request.Path;
 
                             // Read the token for SignalR connections
-                            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/Chat"))
-                            {
-                                context.Token = accessToken;
-                            }
-                            // Read the token for SignalR connections
-                            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/Notification"))
+                            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/notification"))
                             {
                                 context.Token = accessToken;
                             }
@@ -205,6 +208,9 @@ namespace API
 
                 });
                 builder.Services.AddAuthorization();
+
+                // SignalR
+                builder.Services.AddSignalR();
 
                 // Register application services
 
@@ -217,6 +223,41 @@ namespace API
                 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
                 builder.Services.AddScoped<IAuthService, AuthService>();
                 builder.Services.AddScoped<IProductService, ProductService>();
+                builder.Services.AddScoped<ICartService, CartService>();
+                builder.Services.AddScoped<IOrderService, OrderService>();
+                builder.Services.AddScoped<IInvoiceService, InvoiceService>();
+                builder.Services.AddScoped<IReturnRequestService, ReturnRequestService>();
+                builder.Services.AddScoped<IFileStorageService, FileStorageService>();
+                builder.Services.AddScoped<IPdfGeneratorService, PdfGeneratorService>();
+                builder.Services.AddSingleton<IAdminNotificationService, AdminNotificationService>();
+                builder.Services.AddScoped<IUserService, UserService>();
+                builder.Services.AddScoped<IRefreshTokenCleanupService, RefreshTokenCleanupService>();
+                
+                // Register background service for refresh token cleanup
+                builder.Services.AddHostedService<RefreshTokenCleanupBackgroundService>();
+
+                if (builder.Environment.IsDevelopment())
+                {
+                    // Configure S3 or MinIO
+                    builder.Services.AddSingleton<IAmazonS3>(sp =>
+                    {
+                        var config = sp.GetRequiredService<IConfiguration>();
+                        return new AmazonS3Client(
+                            config["AWS:AccessKey"],
+                            config["AWS:SecretKey"],
+                            new AmazonS3Config
+                            {
+                                ServiceURL = config["AWS:S3:ServiceURL"],
+                                ForcePathStyle = true
+                            });
+                    });
+                }
+                else
+                {
+                    builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
+                    builder.Services.AddAWSService<IAmazonS3>();
+                }
+
 
                 var app = builder.Build();
 
@@ -256,6 +297,9 @@ namespace API
                 app.UseAuthentication();
                 app.UseAuthorization();
                 app.MapControllers();
+
+                // Map SignalR hubs
+                app.MapHub<NotificationHub>("/notification");
 
                 Log.Information("Web application started successfully");
                 app.Run();
